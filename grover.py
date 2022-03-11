@@ -47,14 +47,16 @@ def create_grover_circuit(n, f, a):
         for j in range(n):
             circuit.h(j)
 
-        mcx_gate = XGate().control(n)
+        mcx_gate = XGate().control(n, ctrl_state=0)
         circuit.append(mcx_gate, range(n+1))
         # circuit.mcx(list(range(n)), n)
 
         for j in range(n):
             circuit.h(j)
 
-    circuit.measure(range(n), range(n))
+    for i in range(n):
+        circuit.measure(i, n - i - 1)
+    # circuit.measure((range(n)), reversed(range(n)))
 
     return circuit
 
@@ -79,8 +81,8 @@ def run(n, f, a):
     Returns a single integer: a value x such that f(x)=1 with good probability
     """
     circuit = create_grover_circuit(n, f, a)
-    print("Circuit")
-    print(circuit.draw())
+    # print("Circuit")
+    # print(circuit.draw())
 
     if USE_IBMQ:
         IBMQ.save_account(
@@ -99,14 +101,13 @@ def run(n, f, a):
 
     # Grab the results from the job.
     result_sim = job_sim.result()
-
-    # print(result_sim)
+    print(result_sim)
 
     counts = result_sim.get_counts()
-    print(counts)
+    # print(counts)
 
     result_int = int(max(counts.keys(), key=lambda x: counts[x]), base=2)
-    print(result_int)
+    # print(result_int)
     # breakpoint()
     # assert len(counts) == 1
     # for k in counts.keys():
@@ -162,7 +163,6 @@ def main(max_num_bits, num_cases):
             N = 1 << num_bits
             # randint(a,b) samples from [a,b] inclusive
             r = random.randint(0, N - 1)
-            print("r:", r)
 
             def f(x):
                 return int(x == r)

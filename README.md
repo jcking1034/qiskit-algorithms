@@ -29,6 +29,11 @@ Upon running the program, several pieces of information will be output. First, t
 
 ## Grover
 
+```sh
+python grover.py [NUM BITS] [NUM CASES]
+```
+Upon running the program, several pieces of information will be output. For each `n` between 1 and `NUM BITS` inclusive, information about the current case is output (including the number of bits, number of iteration, expected number of correct runs, actual number of correct nums, total run time, and average simulation run time). In addition, the run information of the circuit simulation is output.
+
 ## QAOA
 
 ## Shor
