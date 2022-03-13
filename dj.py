@@ -6,10 +6,15 @@ import numpy as np
 import qiskit
 from qiskit import IBMQ
 from qiskit.providers.aer import QasmSimulator
+from qiskit.providers.aer.noise import NoiseModel
 from qiskit.quantum_info.operators import Operator
 
-USE_IBMQ = True
+USE_IBMQ = False
+SIMULATOR_NOISE = True
 NUM_SHOTS = 1024
+
+if USE_IBMQ or SIMULATOR_NOISE:
+    IBMQ.save_account("YOUR_KEY_HERE")
 
 
 class Outcome(enum.Enum):
@@ -17,15 +22,12 @@ class Outcome(enum.Enum):
     BALANCED = enum.auto()
 
 
-def get_U_f_matrix(n, f):
-    side = 2 ** (n + 1)
+def get_U_f_matrix(n_inp, n_anc, f):
+    side = 2 ** (n_inp + n_anc)
     ret = np.zeros((side, side))
 
-    for xb in range(2 ** (n + 1)):
-        x = xb >> 1
-        b = xb & 1
-        y = f(x)
-        ret[xb, x << 1 | (b ^ y)] = 1
+    for i in range(side):
+        ret[bool(f(i >> n_anc)) ^ i, i] = 1
 
     return ret
 
@@ -43,7 +45,7 @@ def create_dj_circuit(n, f):
 
     circuit.barrier()
 
-    U_f = Operator(get_U_f_matrix(n, f))
+    U_f = Operator(get_U_f_matrix(n, 1, f))
     circuit.unitary(U_f, reversed(range(n + 1)), "U_f")
 
     circuit.barrier()
@@ -81,9 +83,13 @@ if __name__ == "__main__":
     # print(circuit.draw())
 
     if USE_IBMQ:
-        IBMQ.save_account("YOUR_KEY_HERE")
         provider = IBMQ.load_account()
         backend = provider.backend.ibmq_quito
+    elif SIMULATOR_NOISE:
+        provider = IBMQ.load_account()
+        noise_backend = provider.backend.ibmq_quito
+        noise_model = NoiseModel.from_backend(noise_backend)
+        backend = QasmSimulator(noise_model=noise_model)
     else:
         backend = QasmSimulator()
 
@@ -96,7 +102,7 @@ if __name__ == "__main__":
     # Grab the results from the job.
     result_sim = job_sim.result()
 
-    print("Circuit Results", result_sim)
+    print("Circuit Results:", result_sim)
 
     counts = result_sim.get_counts()
     result = int(max(counts.keys(), key=lambda x: counts[x]), base=2)

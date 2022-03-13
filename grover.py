@@ -7,12 +7,17 @@ from math import acos, floor, pi, sin, sqrt
 import numpy as np
 import qiskit
 from qiskit import IBMQ
-from qiskit.providers.aer import QasmSimulator
-from qiskit.quantum_info.operators import Operator
 from qiskit.circuit.library.standard_gates import XGate
+from qiskit.providers.aer import QasmSimulator
+from qiskit.providers.aer.noise import NoiseModel
+from qiskit.quantum_info.operators import Operator
 
 USE_IBMQ = False
+SIMULATOR_NOISE = False
 NUM_SHOTS = 1024
+
+if USE_IBMQ or SIMULATOR_NOISE:
+    IBMQ.save_account("YOUR_KEY_HERE")
 
 
 def get_U_f_matrix(n_inp, n_anc, f):
@@ -26,7 +31,6 @@ def get_U_f_matrix(n_inp, n_anc, f):
 
 
 def create_grover_circuit(n, f, a):
-    # breakpoint()
     k, _ = calc_grover_params(a, n)
 
     circuit = qiskit.QuantumCircuit(n + 1, n)
@@ -42,21 +46,19 @@ def create_grover_circuit(n, f, a):
 
     for i in range(k):
         U_f = Operator(get_U_f_matrix(n, 1, f))
-        circuit.unitary(U_f, reversed(range(n+1)), "U_f")
+        circuit.unitary(U_f, reversed(range(n + 1)), "U_f")
 
         for j in range(n):
             circuit.h(j)
 
         mcx_gate = XGate().control(n, ctrl_state=0)
-        circuit.append(mcx_gate, range(n+1))
-        # circuit.mcx(list(range(n)), n)
+        circuit.append(mcx_gate, range(n + 1))
 
         for j in range(n):
             circuit.h(j)
 
     for i in range(n):
         circuit.measure(i, n - i - 1)
-    # circuit.measure((range(n)), reversed(range(n)))
 
     return circuit
 
@@ -85,11 +87,13 @@ def run(n, f, a):
     # print(circuit.draw())
 
     if USE_IBMQ:
-        IBMQ.save_account(
-            "YOUR_KEY_HERE"
-        )
         provider = IBMQ.load_account()
         backend = provider.backend.ibmq_quito
+    elif SIMULATOR_NOISE:
+        provider = IBMQ.load_account()
+        noise_backend = provider.backend.ibmq_quito
+        noise_model = NoiseModel.from_backend(noise_backend)
+        backend = QasmSimulator(noise_model=noise_model)
     else:
         backend = QasmSimulator()
 
@@ -107,20 +111,12 @@ def run(n, f, a):
     # print(counts)
 
     result_int = int(max(counts.keys(), key=lambda x: counts[x]), base=2)
-    # print(result_int)
-    # breakpoint()
-    # assert len(counts) == 1
-    # for k in counts.keys():
-    #     result_int = int(k, base=2)
-    #     break
 
     # Qubit q{i} represents the ith *most* significant bit of the input to f
     # when we are constructing U_f
     # Here we account for that by shifting q{i} by (n-i-1) in the output
     # The caller of run_grover does not need to think about this, as they receive
     # an integer x which they can plug into f (and hopefully get f(x)=1)
-    # result_int = sum(result.measurements[f'q{i}'][0][0] << (
-    #     n-i-1) for i in range(n))
     return (result_int, 0)
 
 

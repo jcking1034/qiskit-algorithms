@@ -2,42 +2,35 @@
 
 import copy
 import sys
-import time
-from random import randint
 
 import cirq
 import numpy as np
 import qiskit
 import sympy
 from bitstring import BitArray
-from numpy import average
 from qiskit import IBMQ
 from qiskit.providers.aer import QasmSimulator
+from qiskit.providers.aer.noise import NoiseModel
 from qiskit.quantum_info.operators import Operator
 
 # n is the size input of the function (number of non ancilla bits)
 
-USE_IBMQ = True
+USE_IBMQ = False
+SIMULATOR_NOISE = False
 NUM_SHOTS = 1
+
+if USE_IBMQ or SIMULATOR_NOISE:
+    IBMQ.save_account("YOUR_KEY_HERE")
 
 
 def result_to_int(result, n):
     return int(max(result.keys(), key=lambda x: result[x]), base=2)
-    # assert len(result) == 1
-    # for k, _ in result.items():
-    #     x = k
-    #     break
-    # return int(x[::-1], base=2)
 
 
 def result_to_bitlist(result, n):
     """ "qbit 0 (MSB) is first"""
     s = max(result.keys(), key=lambda x: result[x])
 
-    # assert len(result) == 1
-    # for k, _ in result.items():
-    #     x = k
-    #     break
     return [int(i) for i in s[::-1]]
 
 
@@ -71,9 +64,13 @@ def simon(n: int, f) -> BitArray:
         # print(circuit.draw())
 
         if USE_IBMQ:
-            IBMQ.save_account("YOUR_KEY_HERE")
             provider = IBMQ.load_account()
             backend = provider.backend.ibmq_quito
+        elif SIMULATOR_NOISE:
+            provider = IBMQ.load_account()
+            noise_backend = provider.backend.ibmq_quito
+            noise_model = NoiseModel.from_backend(noise_backend)
+            backend = QasmSimulator(noise_model=noise_model)
         else:
             backend = QasmSimulator()
 
@@ -230,22 +227,6 @@ def create_simon_circuit(f, n: int):
     circuit.measure(range(n), range(n))
 
     return circuit
-
-    # # initialisze the qubits
-    # qbits = [cirq.LineQubit(i) for i in range(2 * n)]
-
-    # # Create a circuit
-    # circuit = cirq.Circuit()
-    # circuit.append(cirq.H(q) for q in cirq.LineQubit.range(n))  # first round of Hs
-    # # add the Uf, first test the above
-    # u_f = U_f(f, n, n)
-    # circuit.append(u_f(*qbits))  # ?questionable syntax
-
-    # circuit.append(cirq.H(q) for q in cirq.LineQubit.range(n))  # 2nd round of Hs
-
-    # circuit.append(cirq.measure(q, key=f"q{i}") for i, q in enumerate(qbits[:n]))
-
-    # return qbits, circuit
 
 
 def constructSimonDict(n: int, s: int):
