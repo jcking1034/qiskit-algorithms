@@ -11,6 +11,7 @@ from qiskit.quantum_info.operators import Operator
 
 USE_IBMQ = False
 SIMULATOR_NOISE = True
+VERBOSE = True
 NUM_SHOTS = 1024
 
 if USE_IBMQ or SIMULATOR_NOISE:
@@ -74,7 +75,7 @@ if __name__ == "__main__":
         f = functions[sys.argv[2]]
         print(f"{n} qubits, {sys.argv[2]} function")
     except Exception:
-        print("Usage: python dj.py [num qubits] [type: 'constant'|'balanced']")
+        print("Usage: python dj.py [n] [type: constant|balanced]")
         exit(1)
 
     circuit = create_dj_circuit(n, f)
@@ -102,7 +103,8 @@ if __name__ == "__main__":
     # Grab the results from the job.
     result_sim = job_sim.result()
 
-    print("Circuit Results:", result_sim)
+    if VERBOSE:
+        print("Circuit Results:", result_sim)
 
     counts = result_sim.get_counts()
     result = int(max(counts.keys(), key=lambda x: counts[x]), base=2)

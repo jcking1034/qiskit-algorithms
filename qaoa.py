@@ -4,6 +4,7 @@ Our implementation draws much guidance from [Google's tutorial](https://quantuma
 """
 
 import random
+import sys
 import time  # to sample a random partition to check against QAOA
 
 import cirq  # for quantum simulation
@@ -13,10 +14,20 @@ import networkx as nx  # to construct and work with graphs graphs
 import numpy as np  # for general numberical manipulations
 # for working with alpha and beta, the paramters of the algorithm
 import sympy
-from qiskit import Aer, QuantumCircuit
+from qiskit import IBMQ, Aer, QuantumCircuit
+from qiskit.providers.aer import QasmSimulator
+from qiskit.providers.aer.noise import NoiseModel
 from scipy.optimize import minimize
 
 working_device = cirq_google.Bristlecone
+
+
+USE_IBMQ = False
+SIMULATOR_NOISE = True
+VERBOSE = True
+
+if USE_IBMQ or SIMULATOR_NOISE:
+    IBMQ.save_account("YOUR_KEY_HERE")
 
 
 GRAPHICAL_DISPLAY = False
@@ -229,7 +240,7 @@ def visualise_cut(S_partition, working_graph, plt_title_string):
     return size
 
 
-def create_qaoa_circ(G, theta):
+def create_qaoa_circuit(G, theta):
     nqubits = len(G.nodes())
     p = len(theta) // 2  # number of alternating unitaries
     qc = QuantumCircuit(nqubits)
@@ -257,13 +268,26 @@ def create_qaoa_circ(G, theta):
 
 
 def get_expectation(G, shots=512):
-    backend = Aer.get_backend("qasm_simulator")
+    if USE_IBMQ:
+        provider = IBMQ.load_account()
+        backend = provider.backend.ibmq_quito
+    elif SIMULATOR_NOISE:
+        provider = IBMQ.load_account()
+        noise_backend = provider.backend.ibmq_quito
+        noise_model = NoiseModel.from_backend(noise_backend)
+        backend = QasmSimulator(noise_model=noise_model)
+    else:
+        backend = QasmSimulator()
+    # backend = Aer.get_backend("qasm_simulator")
     backend.shots = shots
 
     def execute_circ(theta):
 
-        qc = create_qaoa_circ(G, theta)
-        counts = backend.run(qc, seed_simulator=10, nshots=512).result().get_counts()
+        qc = create_qaoa_circuit(G, theta)
+        result = backend.run(qc, seed_simulator=10, nshots=512).result()
+        if VERBOSE:
+            print(result)
+        counts = result.get_counts()
 
         # Calculate expectation
         avg = 0
@@ -286,15 +310,26 @@ def get_expectation(G, shots=512):
 def run_qaoa(G):
     expectation = get_expectation(G)
     res = minimize(expectation, [1.0, 1.0], method="COBYLA")
-    print(res)
+    if VERBOSE:
+        print(res)
 
-    backend = Aer.get_backend("aer_simulator")
+    if USE_IBMQ:
+        provider = IBMQ.load_account()
+        backend = provider.backend.ibmq_quito
+    elif SIMULATOR_NOISE:
+        provider = IBMQ.load_account()
+        noise_backend = provider.backend.ibmq_quito
+        noise_model = NoiseModel.from_backend(noise_backend)
+        backend = QasmSimulator(noise_model=noise_model)
+    else:
+        backend = QasmSimulator()
+    # backend = Aer.get_backend("aer_simulator")
 
-    qc_res = create_qaoa_circ(G, res.x)
+    qc_res = create_qaoa_circuit(G, res.x)
 
-    counts = (
-        backend.run(qc_res, seed_simulator=10, shots=NUM_SHOTS).result().get_counts()
-    )
+    result = backend.run(qc_res, seed_simulator=10, shots=NUM_SHOTS).result()
+    print("Final result:", result)
+    counts = result.get_counts()
 
     best_qaoa_S_partition = set()
     best_qaoa_cut_size = -np.inf
@@ -355,9 +390,15 @@ if __name__ == "__main__":
     random_cut_sizes = []
     circ_runtimes = []
     tot_runtimes = []
-    MIN_SIZE = 10
-    MAX_SIZE = 10
-    for n in range(MIN_SIZE, MAX_SIZE + 1):
+
+    try:
+        min_size = int(sys.argv[1])
+        max_size = int(sys.argv[2])
+    except Exception:
+        print("Usage: python qaoa.py [MIN SIZE] [MAX SIZE]")
+        exit(1)
+
+    for n in range(min_size, max_size + 1):
         start_tot_time = time.perf_counter()
 
         alpha = sympy.Symbol("alpha")
@@ -399,13 +440,13 @@ if __name__ == "__main__":
 
     precentege_in_circ = []
     qaoa_rel_to_rand = []
-    print(f"\tFINAL RESULTS FOR CIRCUITS [{MIN_SIZE},{MAX_SIZE+1})")
+    print(f"\tFINAL RESULTS FOR CIRCUITS [{min_size},{max_size+1})")
     print("-------------------------------------------------------------------------\n")
-    for n in range(MAX_SIZE - MIN_SIZE + 1):
+    for n in range(max_size - min_size + 1):
         precentege_in_circ.append(circ_runtimes[n] / tot_runtimes[n])
         qaoa_rel_to_rand.append(qaoa_cut_sizes[n] / random_cut_sizes[n])
         print(
-            f"For n={n+MIN_SIZE} we have a total circuit runtime {circ_runtimes[n]} and total runtime {tot_runtimes[n]} which means we spent {precentege_in_circ[n]} of the time runnign the circuit"
+            f"For n={n+min_size} we have a total circuit runtime {circ_runtimes[n]} and total runtime {tot_runtimes[n]} which means we spent {precentege_in_circ[n]} of the time runnign the circuit"
         )
         print(
             f"\tQAOA found a best cut of size {qaoa_cut_sizes[n]} while random search found a best cut of size {random_cut_sizes[n]}, for relative score of {qaoa_rel_to_rand[n]}."

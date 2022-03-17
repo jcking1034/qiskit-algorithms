@@ -13,12 +13,18 @@ import qiskit
 from qiskit import IBMQ
 from qiskit.circuit.library import QFT
 from qiskit.providers.aer import QasmSimulator
+from qiskit.providers.aer.noise import NoiseModel
 
 # Use new randomness every time
 random.seed(time.time())
 
 USE_IBMQ = False
+SIMULATOR_NOISE = False
+VERBOSE = True
 NUM_SHOTS = 1024
+
+if USE_IBMQ or SIMULATOR_NOISE:
+    IBMQ.save_account("YOUR_KEY_HERE")
 
 
 def get_U_f_matrix(n_inp, n_anc, f):
@@ -151,9 +157,13 @@ def run_period_finder(N, x):
         circuit = create_period_finder(r1_length, r2_length, u_f)
 
         if USE_IBMQ:
-            IBMQ.save_account("YOUR_KEY_HERE")
             provider = IBMQ.load_account()
             backend = provider.backend.ibmq_quito
+        elif SIMULATOR_NOISE:
+            provider = IBMQ.load_account()
+            noise_backend = provider.backend.ibmq_quito
+            noise_model = NoiseModel.from_backend(noise_backend)
+            backend = QasmSimulator(noise_model=noise_model)
         else:
             backend = QasmSimulator()
 
@@ -170,14 +180,15 @@ def run_period_finder(N, x):
 
         # Grab the results from the job.
         result_sim = job_sim.result()
-        print(result_sim)
+        if VERBOSE:
+            print(result_sim)
 
         counts = result_sim.get_counts()
-        print(counts)
+        # print(counts)
 
         max_key = max(counts.keys(), key=lambda x: counts[x])
         result_int = int(max_key[:r1_length], base=2)
-        print(max_key, result_int)
+        # print(max_key, result_int)
 
         """
         simulator = cirq.Simulator()

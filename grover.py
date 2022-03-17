@@ -14,10 +14,13 @@ from qiskit.quantum_info.operators import Operator
 
 USE_IBMQ = False
 SIMULATOR_NOISE = False
+VERBOSE = True
 NUM_SHOTS = 1024
 
 if USE_IBMQ or SIMULATOR_NOISE:
     IBMQ.save_account("YOUR_KEY_HERE")
+
+# poetry run python grover.py 8 10
 
 
 def get_U_f_matrix(n_inp, n_anc, f):
@@ -105,7 +108,8 @@ def run(n, f, a):
 
     # Grab the results from the job.
     result_sim = job_sim.result()
-    print(result_sim)
+    if VERBOSE:
+        print(result_sim)
 
     counts = result_sim.get_counts()
     # print(counts)
@@ -117,7 +121,7 @@ def run(n, f, a):
     # Here we account for that by shifting q{i} by (n-i-1) in the output
     # The caller of run_grover does not need to think about this, as they receive
     # an integer x which they can plug into f (and hopefully get f(x)=1)
-    return (result_int, 0)
+    return (result_int, result_sim.time_taken)
 
 
 def main_extended(max_num_bits, num_cases):

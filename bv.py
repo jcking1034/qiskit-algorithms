@@ -8,8 +8,9 @@ from qiskit.providers.aer import QasmSimulator
 from qiskit.providers.aer.noise import NoiseModel
 from qiskit.quantum_info.operators import Operator
 
-USE_IBMQ = False
-SIMULATOR_NOISE = True
+USE_IBMQ = True
+SIMULATOR_NOISE = False
+VERBOSE = True
 NUM_SHOTS = 1024
 
 if USE_IBMQ or SIMULATOR_NOISE:
@@ -95,7 +96,8 @@ def run(n, f):
     # Grab the results from the job.
     result_sim = job_sim.result()
 
-    print(result_sim)
+    if VERBOSE:
+        print(result_sim)
 
     counts = result_sim.get_counts()
     # print(counts)
@@ -121,7 +123,7 @@ if __name__ == "__main__":
         b = int(bool(int(sys.argv[3])))
         print(f"{n} qubits, a={a}, b={b}")
     except Exception:
-        print("Usage: python bv.py [num qubits] [a] [b]")
+        print("Usage: python bv.py [n] [a] [b]")
         exit(1)
 
     actual_a, actual_b = run(n, lambda x: add(multiply(a, x), b))

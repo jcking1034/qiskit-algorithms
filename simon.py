@@ -17,6 +17,7 @@ from qiskit.quantum_info.operators import Operator
 
 USE_IBMQ = False
 SIMULATOR_NOISE = False
+VERBOSE = True
 NUM_SHOTS = 1
 
 if USE_IBMQ or SIMULATOR_NOISE:
@@ -78,7 +79,8 @@ def simon(n: int, f) -> BitArray:
         job_sim = backend.run(transpiled, shots=NUM_SHOTS)
 
         result_sim = job_sim.result()
-        print(result_sim)
+        if VERBOSE:
+            print(result_sim)
 
         counts = result_sim.get_counts()
         # print(counts)
@@ -250,7 +252,7 @@ if __name__ == "__main__":
             exit(1)
         print(f"{n} qubits, s={s}")
     except Exception:
-        print("Usage: python simon.py [num qubits] [s]")
+        print("Usage: python simon.py [n] [s]")
         exit(1)
 
     simon_array = list(constructSimonDict(n, s))
