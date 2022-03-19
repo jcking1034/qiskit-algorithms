@@ -1,6 +1,6 @@
 # README
 
-To use these programs, ensure that all dependencies (`qiskit`, `bitstring`, etc.) are up to date.
+To use these programs, ensure that all dependencies (`qiskit`, `bitstring`, `cirq`, etc.) are up to date.
 
 The following sections contain instructions on how to use each program. Note that the programs themselves have a few adjustable constants. For example, the `USE_IBMQ` constant can be set to `True` or `False`, depending on whether circuits should be run on a simulator, or on a quantum computer. Additionally, the `SIMULATOR_NOISE` constant can be set to `True` or `False` - if `USE_IBMQ` is `False` and `SIMULATOR_NOISE` is `True`, then all simulations will be performed using noise models based on an actual IBM quantum computer's noise. Furthermore, the `VERBOSE` constant can be set to `True` or `False` to adjust some of the extra logging.
 

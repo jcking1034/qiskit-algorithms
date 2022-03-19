@@ -14,6 +14,7 @@ import networkx as nx  # to construct and work with graphs graphs
 import numpy as np  # for general numberical manipulations
 # for working with alpha and beta, the paramters of the algorithm
 import sympy
+import qiskit
 from qiskit import IBMQ, Aer, QuantumCircuit
 from qiskit.providers.aer import QasmSimulator
 from qiskit.providers.aer.noise import NoiseModel
@@ -241,25 +242,27 @@ def visualise_cut(S_partition, working_graph, plt_title_string):
 
 
 def create_qaoa_circuit(G, theta):
-    nqubits = len(G.nodes())
-    p = len(theta) // 2  # number of alternating unitaries
-    qc = QuantumCircuit(nqubits)
+    n = len(G.nodes())
+    p = len(theta) // 2
+    qc = QuantumCircuit(n)
 
-    beta = theta[:p]
-    gamma = theta[p:]
+    beta = theta[:len(theta) // 2]
+    gamma = theta[len(theta) // 2:]
 
     # initial_state
-    for i in range(0, nqubits):
+    for i in range(0, n):
         qc.h(i)
 
     for irep in range(0, p):
 
         # problem unitary
         for pair in list(G.edges()):
-            qc.rzz(2 * gamma[irep], pair[0], pair[1])
+            start = pair[0]
+            stop = pair[1]
+            qc.rzz(2 * gamma[irep], start, stop)
 
         # mixer unitary
-        for i in range(0, nqubits):
+        for i in range(0, n):
             qc.rx(2 * beta[irep], i)
 
     qc.measure_all()
@@ -268,25 +271,34 @@ def create_qaoa_circuit(G, theta):
 
 
 def get_expectation(G, shots=512):
-    if USE_IBMQ:
-        provider = IBMQ.load_account()
-        backend = provider.backend.ibmq_quito
-    elif SIMULATOR_NOISE:
+    if SIMULATOR_NOISE:
         provider = IBMQ.load_account()
         noise_backend = provider.backend.ibmq_quito
         noise_model = NoiseModel.from_backend(noise_backend)
         backend = QasmSimulator(noise_model=noise_model)
     else:
-        backend = QasmSimulator()
+        backend = Aer.get_backend("qasm_simulator")
+    # if USE_IBMQ:
+    #     provider = IBMQ.load_account()
+    #     backend = provider.backend.ibmq_quito
+    # elif SIMULATOR_NOISE:
+    #     provider = IBMQ.load_account()
+    #     noise_backend = provider.backend.ibmq_quito
+    #     noise_model = NoiseModel.from_backend(noise_backend)
+    #     backend = QasmSimulator(noise_model=noise_model)
+    # else:
+    #     backend = QasmSimulator()
     # backend = Aer.get_backend("qasm_simulator")
     backend.shots = shots
 
-    def execute_circ(theta):
+    def execute_circuit(theta):
+        # print("execute_circuit", backend)
 
         qc = create_qaoa_circuit(G, theta)
-        result = backend.run(qc, seed_simulator=10, nshots=512).result()
-        if VERBOSE:
-            print(result)
+        transpiled = qiskit.transpile(qc, backend)
+        result = backend.run(transpiled, seed_simulator=10, nshots=512).result()
+        # if VERBOSE:
+        #     print(result)
         counts = result.get_counts()
 
         # Calculate expectation
@@ -304,7 +316,7 @@ def get_expectation(G, shots=512):
 
         return avg / sum_count
 
-    return execute_circ
+    return execute_circuit
 
 
 def run_qaoa(G):
@@ -324,10 +336,11 @@ def run_qaoa(G):
     else:
         backend = QasmSimulator()
     # backend = Aer.get_backend("aer_simulator")
+    # print("Backend for final result:", backend)
 
     qc_res = create_qaoa_circuit(G, res.x)
-
-    result = backend.run(qc_res, seed_simulator=10, shots=NUM_SHOTS).result()
+    transpiled = qiskit.transpile(qc_res, backend)
+    result = backend.run(transpiled, seed_simulator=10, shots=1024).result()
     print("Final result:", result)
     counts = result.get_counts()
 
