@@ -9,7 +9,7 @@ from qiskit.providers.aer import QasmSimulator
 from qiskit.providers.aer.noise import NoiseModel
 from qiskit.quantum_info.operators import Operator
 
-USE_IBMQ = False
+USE_IBMQ = True
 SIMULATOR_NOISE = True
 VERBOSE = True
 NUM_SHOTS = 1024

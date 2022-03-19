@@ -18,7 +18,7 @@ from qiskit.providers.aer.noise import NoiseModel
 # Use new randomness every time
 random.seed(time.time())
 
-USE_IBMQ = False
+USE_IBMQ = True
 SIMULATOR_NOISE = False
 VERBOSE = True
 NUM_SHOTS = 1024

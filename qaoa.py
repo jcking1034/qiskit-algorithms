@@ -23,7 +23,7 @@ from scipy.optimize import minimize
 working_device = cirq_google.Bristlecone
 
 
-USE_IBMQ = False
+USE_IBMQ = True
 SIMULATOR_NOISE = True
 VERBOSE = True
 

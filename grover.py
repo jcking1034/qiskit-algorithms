@@ -12,7 +12,7 @@ from qiskit.providers.aer import QasmSimulator
 from qiskit.providers.aer.noise import NoiseModel
 from qiskit.quantum_info.operators import Operator
 
-USE_IBMQ = False
+USE_IBMQ = True
 SIMULATOR_NOISE = False
 VERBOSE = True
 NUM_SHOTS = 1024
@@ -163,6 +163,7 @@ def main(max_num_bits, num_cases):
             N = 1 << num_bits
             # randint(a,b) samples from [a,b] inclusive
             r = random.randint(0, N - 1)
+            print("r: ", r)
 
             def f(x):
                 return int(x == r)

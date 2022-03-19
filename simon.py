@@ -15,10 +15,10 @@ from qiskit.quantum_info.operators import Operator
 
 # n is the size input of the function (number of non ancilla bits)
 
-USE_IBMQ = False
+USE_IBMQ = True
 SIMULATOR_NOISE = False
 VERBOSE = True
-NUM_SHOTS = 1
+NUM_SHOTS = 1024
 
 if USE_IBMQ or SIMULATOR_NOISE:
     IBMQ.save_account("YOUR_KEY_HERE")
